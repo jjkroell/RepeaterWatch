@@ -9,7 +9,7 @@ A web dashboard for monitoring a MeshCore repeater node running on a Raspberry P
 On a fresh Raspberry Pi OS (Bookworm or later):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jjkroell/RepeaterWatch/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/jjkroell/RepeaterWatch/main/install.sh -o /tmp/rw-install.sh && sudo bash /tmp/rw-install.sh
 ```
 
 The installer will ask for:

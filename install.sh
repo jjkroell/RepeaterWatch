@@ -52,7 +52,7 @@ fi
 info "Enter the full /dev/serial/by-id/... path for your MeshCore radio."
 info "Or enter a raw path (e.g. /dev/ttyUSB0)."
 echo ""
-read -rp "$(echo -e "${CYAN}?${NC}  Serial port: ")" SERIAL_PORT
+echo -en "${CYAN}?${NC}  Serial port: "; read -r SERIAL_PORT </dev/tty
 if [[ -z "$SERIAL_PORT" ]]; then
     err "Serial port is required."
     exit 1
@@ -65,7 +65,7 @@ echo -e "  ${BOLD}Step 2/4 — IATA airport code${NC}\n"
 info "3-letter IATA code for your region (e.g. YVR, SEA, LAX)."
 info "Used by mctomqtt for MQTT topic naming on LetsMesh.net."
 echo ""
-read -rp "$(echo -e "${CYAN}?${NC}  IATA code: ")" IATA_RAW
+echo -en "${CYAN}?${NC}  IATA code: "; read -r IATA_RAW </dev/tty
 IATA="${IATA_RAW^^}"
 if [[ ! "$IATA" =~ ^[A-Z]{3}$ ]]; then
     err "IATA must be exactly 3 letters."
@@ -79,12 +79,12 @@ echo -e "  ${BOLD}Step 3/4 — LetsMesh.net credentials${NC}\n"
 info "Your MeshCore companion app public key (64 hex chars)."
 info "Find it in the MeshCore app: Settings → Device Info → Public Key."
 echo ""
-read -rp "$(echo -e "${CYAN}?${NC}  Owner public key: ")" LETSMESH_OWNER
+echo -en "${CYAN}?${NC}  Owner public key: "; read -r LETSMESH_OWNER </dev/tty
 if [[ ! "$LETSMESH_OWNER" =~ ^[0-9A-Fa-f]{64}$ ]]; then
     err "Public key must be exactly 64 hex characters."
     exit 1
 fi
-read -rp "$(echo -e "${CYAN}?${NC}  LetsMesh email: ")" LETSMESH_EMAIL
+echo -en "${CYAN}?${NC}  LetsMesh email: "; read -r LETSMESH_EMAIL </dev/tty
 if [[ -z "$LETSMESH_EMAIL" ]]; then
     err "Email is required for LetsMesh authentication."
     exit 1
@@ -95,7 +95,7 @@ echo ""
 # --- RepeaterWatch port ---
 echo -e "  ${BOLD}Step 4/4 — RepeaterWatch web port${NC}\n"
 info "Port the dashboard will listen on (default: 5000)."
-read -rp "$(echo -e "${CYAN}?${NC}  Web port [5000]: ")" RW_PORT_RAW
+echo -en "${CYAN}?${NC}  Web port [5000]: "; read -r RW_PORT_RAW </dev/tty
 RW_PORT="${RW_PORT_RAW:-5000}"
 ok "Web port: $RW_PORT"
 echo ""
