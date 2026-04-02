@@ -8,13 +8,12 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
-header()   { echo -e "\n${BLUE}${BOLD}══════════════════════════════════════════════════${NC}"; echo -e "${BLUE}${BOLD}  $1${NC}"; echo -e "${BLUE}${BOLD}══════════════════════════════════════════════════${NC}\n"; }
-ok()       { echo -e "${GREEN}✓${NC}  $1"; }
-warn()     { echo -e "${YELLOW}⚠${NC}  $1"; }
-err()      { echo -e "${RED}✗${NC}  $1"; }
-info()     { echo -e "${CYAN}ℹ${NC}  $1"; }
+header() { echo -e "\n${BLUE}${BOLD}══════════════════════════════════════════════════${NC}"; echo -e "${BLUE}${BOLD}  $1${NC}"; echo -e "${BLUE}${BOLD}══════════════════════════════════════════════════${NC}\n"; }
+ok()     { echo -e "${GREEN}✓${NC}  $1"; }
+warn()   { echo -e "${YELLOW}⚠${NC}  $1"; }
+err()    { echo -e "${RED}✗${NC}  $1"; }
+info()   { echo -e "${CYAN}ℹ${NC}  $1"; }
 
-# ── Root check ───────────────────────────────────────────────────────────────
 # Reattach stdin to terminal — required when run via curl | bash
 exec < /dev/tty
 
@@ -39,69 +38,55 @@ echo ""
 
 # ── Gather inputs upfront ────────────────────────────────────────────────────
 header "Configuration"
-echo -e "  Before installing, we need a few details.\n"
+echo -e "  Before installing, we need a couple of details.\n"
 
-# --- Serial port ---
-echo -e "  ${BOLD}Step 1/4 — Physical serial port${NC}\n"
-USB_DEVICES=$(ls /dev/serial/by-id/ 2>/dev/null || true)
-if [[ -n "$USB_DEVICES" ]]; then
-    info "Detected USB serial devices:"
-    while IFS= read -r d; do echo "      /dev/serial/by-id/$d"; done <<< "$USB_DEVICES"
+# --- Serial port (auto-detect) ---
+echo -e "  ${BOLD}Step 1/2 — Physical serial port${NC}\n"
+
+mapfile -t USB_DEVICES < <(ls /dev/serial/by-id/ 2>/dev/null || true)
+
+if [[ ${#USB_DEVICES[@]} -eq 1 ]]; then
+    SERIAL_PORT="/dev/serial/by-id/${USB_DEVICES[0]}"
+    ok "Auto-detected: $SERIAL_PORT"
+elif [[ ${#USB_DEVICES[@]} -gt 1 ]]; then
+    info "Multiple USB serial devices detected:"
+    for i in "${!USB_DEVICES[@]}"; do
+        echo -e "    ${BOLD}$((i+1))${NC}) /dev/serial/by-id/${USB_DEVICES[$i]}"
+    done
     echo ""
+    echo -en "${CYAN}?${NC}  Select device number [1]: "; read -r SEL </dev/tty
+    SEL="${SEL:-1}"
+    if [[ "$SEL" =~ ^[0-9]+$ ]] && (( SEL >= 1 && SEL <= ${#USB_DEVICES[@]} )); then
+        SERIAL_PORT="/dev/serial/by-id/${USB_DEVICES[$((SEL-1))]}"
+        ok "Selected: $SERIAL_PORT"
+    else
+        err "Invalid selection."
+        exit 1
+    fi
+else
+    warn "No USB serial devices detected."
+    info "Enter the path manually (e.g. /dev/ttyUSB0)."
+    echo ""
+    echo -en "${CYAN}?${NC}  Serial port: "; read -r SERIAL_PORT </dev/tty
+    if [[ -z "$SERIAL_PORT" ]]; then
+        err "Serial port is required."
+        exit 1
+    fi
+    ok "Serial port: $SERIAL_PORT"
 fi
-info "Enter the full /dev/serial/by-id/... path for your MeshCore radio."
-info "Or enter a raw path (e.g. /dev/ttyUSB0)."
-echo ""
-echo -en "${CYAN}?${NC}  Serial port: "; read -r SERIAL_PORT </dev/tty
-if [[ -z "$SERIAL_PORT" ]]; then
-    err "Serial port is required."
-    exit 1
-fi
-ok "Serial port: $SERIAL_PORT"
 echo ""
 
-# --- IATA code ---
-echo -e "  ${BOLD}Step 2/4 — IATA airport code${NC}\n"
-info "3-letter IATA code for your region (e.g. YVR, SEA, LAX)."
-info "Used by mctomqtt for MQTT topic naming on LetsMesh.net."
-echo ""
-echo -en "${CYAN}?${NC}  IATA code: "; read -r IATA_RAW </dev/tty
-IATA="${IATA_RAW^^}"
-if [[ ! "$IATA" =~ ^[A-Z]{3}$ ]]; then
-    err "IATA must be exactly 3 letters."
-    exit 1
-fi
-ok "IATA: $IATA"
-echo ""
-
-# --- LetsMesh credentials ---
-echo -e "  ${BOLD}Step 3/4 — LetsMesh.net credentials${NC}\n"
-info "Your MeshCore companion app public key (64 hex chars)."
-info "Find it in the MeshCore app: Settings → Device Info → Public Key."
-echo ""
-echo -en "${CYAN}?${NC}  Owner public key: "; read -r LETSMESH_OWNER </dev/tty
-if [[ ! "$LETSMESH_OWNER" =~ ^[0-9A-Fa-f]{64}$ ]]; then
-    err "Public key must be exactly 64 hex characters."
-    exit 1
-fi
-echo -en "${CYAN}?${NC}  LetsMesh email: "; read -r LETSMESH_EMAIL </dev/tty
-if [[ -z "$LETSMESH_EMAIL" ]]; then
-    err "Email is required for LetsMesh authentication."
-    exit 1
-fi
-ok "LetsMesh credentials set."
-echo ""
-
-# --- RepeaterWatch port ---
-echo -e "  ${BOLD}Step 4/4 — RepeaterWatch web port${NC}\n"
+# --- RepeaterWatch web port ---
+echo -e "  ${BOLD}Step 2/2 — RepeaterWatch web port${NC}\n"
 info "Port the dashboard will listen on (default: 5000)."
 echo -en "${CYAN}?${NC}  Web port [5000]: "; read -r RW_PORT_RAW </dev/tty
 RW_PORT="${RW_PORT_RAW:-5000}"
 ok "Web port: $RW_PORT"
 echo ""
 
-echo -e "  ${BOLD}Login password will be set interactively during the install.${NC}\n"
-echo -e "${YELLOW}  All inputs collected. Starting installation in 3 seconds...${NC}"
+echo -e "  ${BOLD}Login password will be set interactively during the install.${NC}"
+echo -e "  ${BOLD}mctomqtt will ask for your IATA code and LetsMesh credentials.${NC}\n"
+echo -e "${YELLOW}  Starting installation in 3 seconds...${NC}"
 sleep 3
 
 # ── Step 1: System dependencies ──────────────────────────────────────────────
@@ -127,9 +112,6 @@ fi
 info "Configuring serial port: $SERIAL_PORT"
 sed -i "s|REAL_PORT = '.*'|REAL_PORT = '$SERIAL_PORT'|" "$SERIALMUX_DIR/SerialMux.py"
 ok "REAL_PORT configured."
-
-# pyserial installed via apt (python3-serial) above — no pip needed
-ok "pyserial installed."
 
 cat > /etc/systemd/system/SerialMux.service <<EOF
 [Unit]
@@ -161,77 +143,18 @@ fi
 
 # ── Step 3: mctomqtt ─────────────────────────────────────────────────────────
 header "Step 3/4 — mctomqtt"
+info "The mctomqtt installer will now run and ask for your IATA code and LetsMesh credentials."
+echo ""
 
 if [[ -d /opt/mctomqtt ]]; then
     warn "mctomqtt already found at /opt/mctomqtt — skipping installer."
 else
-    info "Running mctomqtt official installer..."
-    echo ""
     bash <(curl -fsSL https://raw.githubusercontent.com/Cisien/meshcoretomqtt/main/install.sh)
     echo ""
     ok "mctomqtt installed."
 fi
 
-info "Writing /etc/mctomqtt/config.d/00-user.toml ..."
-mkdir -p /etc/mctomqtt/config.d
-cat > /etc/mctomqtt/config.d/00-user.toml <<EOF
-# Generated by RepeaterWatch install.sh
-# To edit: sudo nano /etc/mctomqtt/config.d/00-user.toml
-# Then: sudo systemctl restart mctomqtt
-
-[general]
-iata = "$IATA"
-
-[serial]
-ports = ["/dev/ttyV1"]
-
-[update]
-repo = "Cisien/meshcoretomqtt"
-branch = "main"
-
-[[broker]]
-name = "letsmesh-us"
-enabled = true
-server = "mqtt-us-v1.letsmesh.net"
-port = 443
-transport = "websockets"
-keepalive = 60
-qos = 0
-retain = true
-
-[broker.tls]
-enabled = true
-verify = true
-
-[broker.auth]
-method = "token"
-audience = "mqtt-us-v1.letsmesh.net"
-owner = "$LETSMESH_OWNER"
-email = "$LETSMESH_EMAIL"
-
-[[broker]]
-name = "letsmesh-eu"
-enabled = true
-server = "mqtt-eu-v1.letsmesh.net"
-port = 443
-transport = "websockets"
-keepalive = 60
-qos = 0
-retain = true
-
-[broker.tls]
-enabled = true
-verify = true
-
-[broker.auth]
-method = "token"
-audience = "mqtt-eu-v1.letsmesh.net"
-owner = "$LETSMESH_OWNER"
-email = "$LETSMESH_EMAIL"
-EOF
-ok "mctomqtt config written."
-
-# Systemd override: wait for SerialMux virtual port before starting
+# Override: make mctomqtt wait for SerialMux virtual port before starting
 mkdir -p /etc/systemd/system/mctomqtt.service.d
 cat > /etc/systemd/system/mctomqtt.service.d/override.conf <<EOF
 [Service]
@@ -242,9 +165,15 @@ RestartSec=15
 RestartForceExitStatus=0
 EOF
 
+# Update serial port in mctomqtt config to use SerialMux virtual port
+if [[ -f /etc/mctomqtt/config.d/00-user.toml ]]; then
+    sed -i 's|ports = \[.*\]|ports = ["/dev/ttyV1"]|' /etc/mctomqtt/config.d/00-user.toml
+    ok "mctomqtt serial port set to /dev/ttyV1 (SerialMux virtual port)."
+fi
+
 systemctl daemon-reload
 systemctl restart mctomqtt
-ok "mctomqtt restarted with updated config."
+ok "mctomqtt restarted."
 
 # ── Step 4: RepeaterWatch ────────────────────────────────────────────────────
 header "Step 4/4 — RepeaterWatch"
@@ -294,7 +223,6 @@ else
     warn "lgpio not found in system packages. Run: sudo apt install python3-lgpio"
 fi
 
-# Write .env (only if not already present to avoid overwriting existing installs)
 if [[ ! -f "$RW_DIR/.env" ]]; then
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
     cat > "$RW_DIR/.env" <<EOF
@@ -334,7 +262,6 @@ else
     warn ".env already exists — skipping (not overwritten)."
 fi
 
-# Set login password interactively
 echo ""
 echo -e "  ${BOLD}Set a login password for the web dashboard.${NC}"
 echo -e "  ${CYAN}Leave blank and press Ctrl+C to skip (disables auth).${NC}"
@@ -342,13 +269,11 @@ echo ""
 sudo -u meshcoremon "$RW_DIR/venv/bin/python3" "$RW_DIR/setup_auth.py" || true
 echo ""
 
-# Install and start systemd service
 cp "$RW_DIR/systemd/meshcore-monitor.service" /etc/systemd/system/RepeaterWatch.service
 systemctl daemon-reload
 systemctl enable --now RepeaterWatch
 ok "RepeaterWatch service enabled and started."
 
-# Sudoers for firmware flash feature
 cat > /etc/sudoers.d/meshcoremon <<EOF
 meshcoremon ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop SerialMux, /usr/bin/systemctl stop mctomqtt, /usr/bin/systemctl start SerialMux, /usr/bin/systemctl start mctomqtt
 EOF
