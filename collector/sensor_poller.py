@@ -9,6 +9,7 @@ import config
 from database import models
 from collector.sensors import ina3221_sensor, bme280_sensor, lis2dw12_sensor, bq24074_sensor
 from collector.sensors.as3935_sensor import AS3935
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,8 @@ class SensorPoller:
 
     def start(self):
         self._stop_event.clear()
-        self._as3935.init()
+        if os.environ.get("MESHCORE_SENSOR_AS3935", "0") == "1":
+            self._as3935.init()
         self._sensor_status["as3935"]["ok"] = self._as3935.available
 
         # Log sensor library availability at startup

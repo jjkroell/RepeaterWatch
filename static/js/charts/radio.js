@@ -38,7 +38,7 @@ var RadioChart = (function () {
         var nf = [], rssi = [], snr = [];
         for (var i = 0; i < data.timestamps.length; i++) {
             var t = data.timestamps[i] * 1000;
-            nf.push([t, data.noise_floor[i]]);
+            nf.push([t, Math.round(data.noise_floor[i])]);
             rssi.push([t, data.last_rssi[i]]);
             snr.push([t, data.last_snr[i]]);
         }
