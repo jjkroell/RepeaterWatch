@@ -342,7 +342,7 @@ def stats_pi_snapshot():
 # ── Settings ──────────────────────────────────────────────
 
 SETTINGS_DEFAULTS = {
-    "power_source": "ina3221",
+    "power_source": "onboard",
     "ina_solar_channel": "ch1",
     "ina_repeater_channel": "ch0",
     "flash_serial_port": config.FLASH_SERIAL_PORT,
