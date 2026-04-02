@@ -219,10 +219,11 @@ ok "Python dependencies installed."
 
 # Symlink lgpio from system packages into venv
 PYVER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-SITE_SYS=$(python3 -c "import site; print(site.getsitepackages()[0])")
+LGPIO_PY=$(find /usr/lib/python3 -name "lgpio.py" ! -path "*/gpiozero/*" 2>/dev/null | head -1 || true)
+SITE_SYS=$(dirname "$LGPIO_PY" 2>/dev/null || true)
 SITE_VENV="$RW_DIR/venv/lib/python${PYVER}/site-packages"
 
-if [[ -f "$SITE_SYS/lgpio.py" ]] && [[ ! -f "$SITE_VENV/lgpio.py" ]]; then
+if [[ -n "$LGPIO_PY" ]] && [[ ! -f "$SITE_VENV/lgpio.py" ]]; then
     ln -sf "$SITE_SYS/lgpio.py" "$SITE_VENV/lgpio.py"
     LGPIO_SO=$(ls "$SITE_SYS"/_lgpio*.so 2>/dev/null | head -1 || true)
     [[ -n "$LGPIO_SO" ]] && ln -sf "$LGPIO_SO" "$SITE_VENV/$(basename "$LGPIO_SO")"
