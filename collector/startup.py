@@ -1,4 +1,5 @@
 import logging
+import os
 
 from database import models
 
@@ -30,6 +31,11 @@ def collect_device_info(reader):
             if value.lower() in ERROR_RESPONSES:
                 logger.warning("Command '%s' not supported: %s", cmd, value)
                 continue
+            if key == "board":
+                 hw_override = os.environ.get("MESHCORE_HARDWARE", "").strip()
+                 if hw_override:
+                     logger.info("Board name overridden by MESHCORE_HARDWARE: %s", hw_override)
+                     value = hw_override
             models.set_device_info(key, value)
             logger.info("Device %s: %s", key, value)
         else:
