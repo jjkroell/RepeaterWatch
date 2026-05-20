@@ -4,6 +4,8 @@ import logging
 import threading
 import urllib.request
 
+import base64
+
 import config
 
 logger = logging.getLogger(__name__)
@@ -15,14 +17,18 @@ def send_notification(title: str, message: str, priority: str = "default") -> No
 
     def _post():
         try:
+            headers = {
+                "Title": title,
+                "Priority": priority,
+                "Tags": "satellite_antenna",
+            }
+            if config.NTFY_USER and config.NTFY_PASSWORD:
+                creds = base64.b64encode(f"{config.NTFY_USER}:{config.NTFY_PASSWORD}".encode()).decode()
+                headers["Authorization"] = f"Basic {creds}"
             req = urllib.request.Request(
                 config.NTFY_URL,
                 data=message.encode(),
-                headers={
-                    "Title": title,
-                    "Priority": priority,
-                    "Tags": "satellite_antenna",
-                },
+                headers=headers,
                 method="POST",
             )
             urllib.request.urlopen(req, timeout=10)
