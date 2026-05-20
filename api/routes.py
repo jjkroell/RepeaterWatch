@@ -883,6 +883,11 @@ def _device_info(name):
     return {"name": name, "path": path}
 
 
+@api.route("/neighbors/signal-history")
+def neighbors_signal_history():
+    return jsonify(models.query_neighbor_signal_history(_hours()))
+
+
 @api.route("/neighbors/purge", methods=["POST"])
 def neighbors_purge():
     data = request.get_json(force=True)

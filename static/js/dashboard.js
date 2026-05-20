@@ -10,6 +10,9 @@
 
     var piChartsInitialized = false;
     var piCurrentHours = 6;
+
+    var neighbourChartsInitialized = false;
+    var neighbourHours = 24;
     var batteryChartInitialized = false;
 
     var sensorChartsInitialized = false;
@@ -46,8 +49,16 @@
         );
         AirtimeChart.init(document.getElementById('chart-airtime'));
         PacketsChart.init(document.getElementById('chart-packets'));
-        NeighborMap.init(document.getElementById('neighbor-map'));
         chartsInitialized = true;
+    }
+
+    function initNeighbourCharts() {
+        NeighborMap.init(document.getElementById('neighbor-map'));
+        NeighbourSignalCharts.init(
+            document.getElementById('chart-neighbour-snr'),
+            document.getElementById('chart-neighbour-rssi')
+        );
+        neighbourChartsInitialized = true;
     }
 
     function initBatteryChart() {
@@ -61,8 +72,12 @@
         PowerCharts.resize();
         AirtimeChart.resize();
         PacketsChart.resize();
-        NeighborMap.invalidateSize();
         BatteryChart.resize();
+    }
+
+    function resizeNeighbourCharts() {
+        NeighborMap.invalidateSize();
+        NeighbourSignalCharts.resize();
     }
 
     // ── Pi Charts ───────────────────────────────────────
@@ -172,6 +187,18 @@
                 btn.classList.add('active');
                 piCurrentHours = parseInt(btn.getAttribute('data-hours'), 10);
                 refreshPiHealth();
+            });
+        });
+    }
+
+    function setupNeighbourTimeButtons() {
+        var buttons = document.querySelectorAll('.neighbour-time-btn');
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                buttons.forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                neighbourHours = parseInt(btn.getAttribute('data-hours'), 10);
+                refreshNeighbours();
             });
         });
     }
@@ -344,19 +371,32 @@
     }
 
     function onTabActivated(tabId) {
+        relockAllCharts();
         if (tabId === 'meshcore') {
             if (!chartsInitialized) {
                 initCharts();
             }
+            setupChartLocks();
             setTimeout(function () {
                 resizeCharts();
             }, 50);
             refreshMeshCore();
             stopServicesRefresh();
+        } else if (tabId === 'neighbours') {
+            if (!neighbourChartsInitialized) {
+                initNeighbourCharts();
+            }
+            setupChartLocks();
+            setTimeout(function () {
+                resizeNeighbourCharts();
+            }, 50);
+            refreshNeighbours();
+            stopServicesRefresh();
         } else if (tabId === 'raspberry-pi') {
             if (!piChartsInitialized) {
                 initPiCharts();
             }
+            setupChartLocks();
             setTimeout(function () {
                 resizePiCharts();
             }, 50);
@@ -366,6 +406,7 @@
             if (!sensorChartsInitialized) {
                 initSensorCharts();
             }
+            setupChartLocks();
             setTimeout(function () {
                 resizeSensorCharts();
             }, 50);
@@ -452,7 +493,6 @@
                 document.getElementById('di-cr').textContent  = parts[3] ? parts[3] : '--';
             })(d.radio_config);
             document.getElementById('mc-uptime-val').textContent = formatUptime(d.uptime_secs);
-            NeighborMap.setRepeaterInfo(d);
         }).catch(noop);
 
         if (appSettings.power_source === 'ina3221') {
@@ -478,6 +518,20 @@
             updateMeshCoreStatusCards(d);
         }).catch(noop);
 
+        fetchJSON('/api/v1/packets/recent?limit=50').then(function (d) {
+            renderPacketsTable(d);
+        }).catch(noop);
+
+        document.getElementById('last-update').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    }
+
+    function refreshNeighbours() {
+        var h = neighbourHours;
+
+        fetchJSON('/api/v1/device').then(function (d) {
+            NeighborMap.setRepeaterInfo(d);
+        }).catch(noop);
+
         var neighborsReady = fetchJSON('/api/v1/neighbors').then(function (d) {
             renderNeighborsTable(d);
             return d;
@@ -487,11 +541,11 @@
             NeighborMap.update(neighbors);
         });
 
-        fetchJSON('/api/v1/packets/recent?limit=50').then(function (d) {
-            renderPacketsTable(d);
+        fetchJSON('/api/v1/neighbors/signal-history?hours=' + h).then(function (d) {
+            NeighbourSignalCharts.update(d);
         }).catch(noop);
 
-        document.getElementById('last-update').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        document.getElementById('neighbour-last-update').textContent = 'Updated: ' + new Date().toLocaleTimeString();
     }
 
     function updateMeshCoreStatusCards(d) {
@@ -524,6 +578,8 @@
         refreshHeader();
         if (activeTab === 'meshcore') {
             refreshMeshCore();
+        } else if (activeTab === 'neighbours') {
+            refreshNeighbours();
         } else if (activeTab === 'raspberry-pi') {
             refreshPiHealth();
         } else if (activeTab === 'sensors') {
@@ -697,6 +753,8 @@
     function setupMapFullscreen() {
         var card = document.getElementById('map-card');
         var btn = document.getElementById('map-fullscreen');
+        var mapEl = document.getElementById('neighbor-map');
+
         btn.addEventListener('click', function () {
             card.classList.toggle('fullscreen');
             var isFullscreen = card.classList.contains('fullscreen');
@@ -707,6 +765,49 @@
                 NeighborMap.freeze();
             }
             setTimeout(function () { NeighborMap.invalidateSize(); }, 100);
+        });
+
+        // Click-to-interact when not in fullscreen
+        mapEl.addEventListener('click', function () {
+            if (!card.classList.contains('fullscreen')) {
+                NeighborMap.unfreeze();
+            }
+        });
+        mapEl.addEventListener('mouseleave', function () {
+            if (!card.classList.contains('fullscreen')) {
+                NeighborMap.freeze();
+            }
+        });
+    }
+
+    function setupChartLocks() {
+        document.querySelectorAll('.chart-container').forEach(function (el) {
+            // Idempotent: skip if overlay already exists (ECharts appended after it)
+            // Remove and re-append so overlay is always the last child (on top)
+            var existing = el.querySelector('.chart-lock-overlay');
+            if (existing) {
+                el.appendChild(existing); // move to end so it sits above ECharts canvas
+                return;
+            }
+
+            var overlay = document.createElement('div');
+            overlay.className = 'chart-lock-overlay';
+            el.appendChild(overlay);
+
+            overlay.addEventListener('click', function (e) {
+                overlay.classList.add('unlocked');
+                e.stopPropagation();
+            });
+
+            el.addEventListener('mouseleave', function () {
+                overlay.classList.remove('unlocked');
+            });
+        });
+    }
+
+    function relockAllCharts() {
+        document.querySelectorAll('.chart-lock-overlay').forEach(function (o) {
+            o.classList.remove('unlocked');
         });
     }
 
@@ -1405,6 +1506,9 @@
             });
         });
 
+    }
+
+    function setupNeighboursDelete() {
         var nbDeleteBtn = document.getElementById('neighbors-delete-btn');
         var nbStatusEl = document.getElementById('neighbors-delete-status');
 
@@ -1420,6 +1524,7 @@
                 if (resp.ok) {
                     nbStatusEl.textContent = 'Done — neighbours cleared';
                     nbStatusEl.className = 'settings-save-status success';
+                    refreshNeighbours();
                 } else {
                     nbStatusEl.textContent = resp.data.error || 'Failed';
                     nbStatusEl.className = 'settings-save-status error';
@@ -1433,8 +1538,6 @@
                 setTimeout(function () { nbStatusEl.textContent = ''; }, 3000);
             });
         });
-
-
     }
 
     function setupAuthCard() {
@@ -1656,13 +1759,16 @@
     applyTheme(getTheme());
     setupTabs();
     initCharts();
+    setupChartLocks();
     setupTimeButtons();
     setupPiTimeButtons();
+    setupNeighbourTimeButtons();
     setupSensorTimeButtons();
     setupThemeToggle();
 
     // Admin-only setup — elements only exist when authenticated
     if (document.getElementById('map-fullscreen'))   setupMapFullscreen();
+    if (document.getElementById('neighbors-delete-btn')) setupNeighboursDelete();
     if (document.getElementById('fw-flash-btn'))     setupFirmwareFlash();
     if (document.getElementById('reboot-radio-btn')) setupRebootRadio();
     if (document.getElementById('usb-relay-btn'))    setupUsbRelay();

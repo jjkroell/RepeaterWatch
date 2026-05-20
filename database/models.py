@@ -331,6 +331,31 @@ def query_neighbor_history(hours: int = 24) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def query_neighbor_signal_history(hours: int = 24) -> dict:
+    since = _since(hours)
+    rows = _conn().execute(
+        "SELECT s.ts, s.pubkey_prefix, s.snr, s.rssi, n.name "
+        "FROM neighbor_sightings s "
+        "LEFT JOIN neighbors n ON s.pubkey_prefix = n.pubkey_prefix "
+        "WHERE s.ts >= ? ORDER BY s.ts",
+        (since,),
+    ).fetchall()
+    result: dict = {}
+    for r in rows:
+        key = r["pubkey_prefix"]
+        if key not in result:
+            result[key] = {
+                "name": r["name"] or key[:8],
+                "timestamps": [],
+                "snr": [],
+                "rssi": [],
+            }
+        result[key]["timestamps"].append(r["ts"])
+        result[key]["snr"].append(r["snr"])
+        result[key]["rssi"].append(r["rssi"])
+    return result
+
+
 def query_airtime(hours: int = 24) -> list[dict]:
     rows = _conn().execute(
         "SELECT ts, tx_air_secs, rx_air_secs "

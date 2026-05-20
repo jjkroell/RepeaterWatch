@@ -155,9 +155,32 @@ header {
     box-shadow: 0 0 6px var(--green);
 }
 
+/* ── Header Stats ──────────────────────────────────────────── */
+.header-stats {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: rgba(255,255,255,0.35);
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.header-stats strong {
+    color: rgba(255,255,255,0.7);
+    margin-left: 3px;
+}
+
+.header-stats span {
+    white-space: nowrap;
+}
+
 /* ── Logout Button ─────────────────────────────────────────── */
 .logout-btn {
-    margin-left: auto;
     color: rgba(255,255,255,0.45);
     text-decoration: none;
     font-size: 0.78rem;
@@ -381,8 +404,43 @@ header {
 }
 
 .chart-container {
+    position: relative;
     width: 100%;
     height: 220px;
+}
+
+/* ── Chart lock overlay (prevents scroll-wheel capture until clicked) ── */
+.chart-lock-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border-radius: var(--radius);
+    cursor: default;
+}
+
+.chart-lock-overlay::after {
+    content: 'Click to zoom/pan';
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 0.63rem;
+    font-family: var(--font-ui);
+    color: transparent;
+    background: transparent;
+    padding: 2px 8px;
+    border-radius: 10px;
+    pointer-events: none;
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+
+.chart-lock-overlay:hover::after {
+    color: rgba(255,255,255,0.6);
+    background: rgba(0,0,0,0.45);
+}
+
+.chart-lock-overlay.unlocked {
+    pointer-events: none;
 }
 
 /* ── Device Info Card ──────────────────────────────────────── */
@@ -1179,23 +1237,11 @@ td.dir-rx { color: var(--green); }
     color: var(--text-muted);
     margin-bottom: 20px;
 }
-footer {
-    background: var(--bg-card);
-    border-top: 1px solid var(--border);
-    padding: 8px var(--pad);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    font-size: 0.76rem;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-}
 
-footer strong { color: var(--text); }
 
 #theme-toggle {
     margin-left: auto;
+    flex-shrink: 0;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-muted);
@@ -1204,7 +1250,10 @@ footer strong { color: var(--text); }
     cursor: pointer;
     font-family: var(--font-ui);
     font-size: 0.74rem;
+    letter-spacing: 0.04em;
     transition: all 0.15s;
+    align-self: center;
+    margin-right: 0;
 }
 
 #theme-toggle:hover {
@@ -1403,8 +1452,6 @@ footer strong { color: var(--text); }
         gap: 10px;
     }
 
-    footer { padding: 8px var(--pad-sm); gap: 10px; font-size: 0.72rem; }
-
     .service-row { flex-wrap: wrap; }
     .service-uptime { margin-right: 0; }
     .service-btns { width: 100%; justify-content: flex-start; }
@@ -1449,8 +1496,7 @@ footer strong { color: var(--text); }
     .tool-card-reboot-pi,
     .tool-card-terminal { grid-column: span 1; }
 
-    footer #footer-db-size,
-    footer #footer-polls { display: none; }
+    .hstat-hide-sm { display: none; }
 
     .fw-modal { max-height: 90vh; }
     .fw-modal-log { font-size: 0.7rem; }
@@ -1458,7 +1504,7 @@ footer strong { color: var(--text); }
 
 /* ── Print ─────────────────────────────────────────────────── */
 @media print {
-    header, #tab-bar, footer, .card-actions, .service-btns { display: none; }
+    header, #tab-bar, .card-actions, .service-btns { display: none; }
     .tab-panel { display: block !important; }
     .charts-grid { grid-template-columns: 1fr; }
     body { background: #fff; color: #000; }
