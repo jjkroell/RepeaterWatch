@@ -103,7 +103,7 @@ MESHCORE_NTFY_USER=<your-username>
 MESHCORE_NTFY_PASSWORD=<your-password>
 ```
 
-### Configuration options
+### RepeaterWatch configuration (`/opt/RepeaterWatch/.env`)
 
 | Variable | Default | Description |
 |---|---|---|
