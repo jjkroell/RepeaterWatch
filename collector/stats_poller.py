@@ -31,6 +31,7 @@ class StatsPoller:
         self._last_poll: float = 0
         self._poll_count: int = 0
         self._error_count: int = 0
+        self._paused = threading.Event()
 
     @property
     def status(self) -> dict:
@@ -73,7 +74,7 @@ class StatsPoller:
             if not self.reader.connected:
                 self._connect_with_retry()
 
-            if self.reader.connected:
+            if self.reader.connected and not self._paused.is_set():
                 try:
                     self._poll_serial(ts)
                     self._last_poll = time.time()
@@ -92,6 +93,12 @@ class StatsPoller:
 
             self._wait_next_cycle()
 
+    def pause(self):
+        self._paused.set()
+
+    def resume(self):
+        self._paused.clear()
+
     def _connect_with_retry(self):
         for attempt in range(3):
             if self.reader.connect():
@@ -100,7 +107,7 @@ class StatsPoller:
             time.sleep(5)
 
     def _wait_next_cycle(self):
-        next_ts = models.aligned_ts(time.time() + config.POLL_INTERVAL_SECS)
+        next_ts = time.time() + config.POLL_INTERVAL_SECS
         while not self._stop_event.is_set():
             remaining = next_ts - time.time()
             if remaining <= 0:

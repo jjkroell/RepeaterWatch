@@ -9,6 +9,7 @@ import time
 import serial
 
 import config
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ def register_terminal_routes(sock):
 
     @sock.route("/ws/terminal/serial")
     def terminal_serial(ws):
+        poller = current_app.config.get("poller")
+        if poller:
+            poller.pause()
         try:
             ser = serial.Serial(
                 port=config.TERMINAL_SERIAL_PORT,
@@ -75,6 +79,8 @@ def register_terminal_routes(sock):
             )
         except Exception as e:
             ws.send(f"\r\nError opening {config.TERMINAL_SERIAL_PORT}: {e}\r\n")
+            if poller:
+                poller.resume()
             return
 
         stop = threading.Event()
@@ -111,3 +117,5 @@ def register_terminal_routes(sock):
             except Exception:
                 pass
             reader_thread.join(timeout=2)
+            if poller:
+                poller.resume()
