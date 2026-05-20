@@ -120,7 +120,12 @@ fi
 # Remind user to configure ntfy if URL is still empty
 if ! grep -q "^MESHCORE_NTFY_URL=.\+" "$ENV_FILE" 2>/dev/null; then
     echo ""
-    info "Tip: set MESHCORE_NTFY_URL in $ENV_FILE to enable offline/recovery notifications via ntfy.sh."
+    info "Tip: to enable offline/recovery notifications, edit $ENV_FILE and set:"
+    echo -e "    ${BOLD}MESHCORE_NTFY_URL=https://ntfy.sh/<your-topic-here>${NC}"
+    echo -e "    ${CYAN}# For self-hosted ntfy with auth, also set:${NC}"
+    echo -e "    ${BOLD}MESHCORE_NTFY_USER=<your-username>${NC}"
+    echo -e "    ${BOLD}MESHCORE_NTFY_PASSWORD=<your-password>${NC}"
+    echo -e "    ${CYAN}# Leave USER and PASSWORD blank when using the public ntfy.sh server.${NC}"
 fi
 
 # ── Step 4: Restart service ───────────────────────────────────────────────────
