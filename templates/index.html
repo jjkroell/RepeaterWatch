@@ -243,13 +243,15 @@
         </div>
 
         <!-- Signal History Charts -->
-        <div class="charts-grid">
+        <div class="charts-grid charts-grid-single">
             <div class="chart-card">
                 <h3>SNR History</h3>
+                <p class="chart-desc">Signal-to-Noise Ratio — higher is better. LoRa can decode down to −20 dB; above 0 dB is strong, above 5 dB is excellent.</p>
                 <div id="chart-neighbour-snr" class="chart-container"></div>
             </div>
             <div class="chart-card">
                 <h3>RSSI History</h3>
+                <p class="chart-desc">Received Signal Strength — higher (less negative) is better. Above −100 dBm is typical, above −80 dBm is strong.</p>
                 <div id="chart-neighbour-rssi" class="chart-container"></div>
             </div>
         </div>
@@ -974,6 +976,53 @@
 
     <!-- JS Libraries from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+    <!-- Neighbour Signal Modal -->
+    <div id="nb-signal-modal" class="nbm-overlay">
+        <div class="nbm-card">
+            <div class="nbm-header">
+                <div class="nbm-title-row">
+                    <span id="modal-nb-swatch" class="nbm-swatch"></span>
+                    <span id="modal-nb-name" class="nbm-name"></span>
+                </div>
+                <div id="modal-nb-pubkey" class="nbm-pubkey"></div>
+                <button id="nb-modal-close" class="nbm-close">✕</button>
+            </div>
+            <div id="modal-nb-time" class="nbm-time"></div>
+
+            <div class="nbm-section-label">At this point</div>
+            <div class="nbm-point-row">
+                <div class="nbm-point-stat">
+                    <div class="nbm-point-label">SNR</div>
+                    <div id="modal-nb-snr-pt" class="nbm-point-val"></div>
+                </div>
+                <div class="nbm-point-stat">
+                    <div class="nbm-point-label">RSSI</div>
+                    <div id="modal-nb-rssi-pt" class="nbm-point-val"></div>
+                </div>
+            </div>
+
+            <div class="nbm-section-label">Over loaded period</div>
+            <div class="nbm-stats-grid">
+                <div></div>
+                <div class="nbm-col-hdr">Min</div>
+                <div class="nbm-col-hdr">Avg</div>
+                <div class="nbm-col-hdr">Max</div>
+                <div class="nbm-row-hdr">SNR</div>
+                <div id="modal-nb-snr-min"  class="nbm-cell"></div>
+                <div id="modal-nb-snr-avg"  class="nbm-cell nbm-cell-avg"></div>
+                <div id="modal-nb-snr-max"  class="nbm-cell"></div>
+                <div class="nbm-row-hdr">RSSI</div>
+                <div id="modal-nb-rssi-min" class="nbm-cell"></div>
+                <div id="modal-nb-rssi-avg" class="nbm-cell nbm-cell-avg"></div>
+                <div id="modal-nb-rssi-max" class="nbm-cell"></div>
+            </div>
+
+            <div class="nbm-footer">
+                <span id="modal-nb-sightings"></span> sightings in loaded period
+            </div>
+        </div>
+    </div>
 
     <!-- Login Modal -->
     <div id="login-modal-overlay" class="login-modal-overlay" style="display:none;">

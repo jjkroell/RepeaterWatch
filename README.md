@@ -118,6 +118,38 @@ With the default 60-second poll interval, a threshold of 3 means you'll be notif
 
 ---
 
+## Dashboard Overview
+
+RepeaterWatch is a real-time web dashboard for monitoring a MeshCore LoRa repeater node. It polls the node over serial and exposes live data through a Flask/WebSocket backend.
+
+### Tabs
+
+#### MeshCore
+Live node stats: device info, GPS coordinates, radio metrics (SNR, RSSI, airtime), power levels, packet counters, and channel activity charts. Time window selectable from 1 h to 7 days.
+
+#### Raspberry Pi
+Host system health: CPU temperature and load, memory and disk usage, plotted over time.
+
+#### Sensors
+Connected I²C/GPIO sensors (temperature, humidity, pressure, etc.) with time-series charts and a sensor management panel for adding or removing entries.
+
+#### Neighbours
+All nodes heard by the repeater, including:
+- **Map** — Leaflet map showing neighbour positions relative to the repeater. Click the map to pan/zoom; click again to lock.
+- **Table** — Neighbour list with last-seen time, distance, SNR, RSSI, and packet counts.
+- **SNR History / RSSI History** — Time-series charts showing per-neighbour signal trends over the selected period. Each neighbour gets a consistent color derived from its public key.
+  - Hover over a data point to see a tooltip for that specific neighbour.
+  - **Click any data point** to open a detail modal showing the exact SNR and RSSI at that moment plus min/avg/max statistics over the loaded period.
+
+Time window for neighbour history is selectable independently from other tabs (1 h / 6 h / 24 h / 7 d).
+
+#### Tools
+- **Repeater CLI** — Browser-based serial terminal for direct interaction with the MeshCore node. Supports command history (↑/↓). The stats poller pauses automatically on connect and resumes on disconnect. Sessions time out after 90 seconds of inactivity.
+- **Firmware Update** — OTA firmware flash via the MeshCore bootloader.
+- **Settings** — Manage stored neighbours, sensor config, and service control.
+
+---
+
 ## Repeater CLI
 
 The Tools tab includes a browser-based serial CLI for direct interaction with the MeshCore node. When connected, the stats poller automatically pauses so its background commands don't appear in the terminal output. The poller resumes when you disconnect.
