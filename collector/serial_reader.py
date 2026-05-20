@@ -149,5 +149,5 @@ class SerialReader:
                     line = raw.decode("utf-8", errors="replace").strip()
                     if line:
                         self._dispatch_line(line)
-        except serial.SerialException:
-            pass
+        except (serial.SerialException, OSError):
+            self._connected = False

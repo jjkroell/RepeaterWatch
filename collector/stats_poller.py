@@ -121,7 +121,10 @@ class StatsPoller:
             except Exception:
                 logger.exception("Error during retention purge")
 
-            self._wait_next_cycle()
+            try:
+                self._wait_next_cycle()
+            except Exception:
+                logger.exception("Error in wait cycle")
 
     def pause(self):
         self._paused.set()
