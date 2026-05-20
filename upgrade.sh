@@ -105,12 +105,22 @@ env_add_if_missing() {
     fi
 }
 
-env_add_if_missing "MESHCORE_LOGIN_MAX_ATTEMPTS" "5"    "Failed login attempts before lockout"
-env_add_if_missing "MESHCORE_LOGIN_LOCKOUT_SECS" "300"  "Lockout duration in seconds"
-env_add_if_missing "MESHCORE_TRUSTED_PROXIES"    ""     "Comma-separated IPs of trusted reverse proxies (e.g. 127.0.0.1 for cloudflared)"
+env_add_if_missing "MESHCORE_LOGIN_MAX_ATTEMPTS"      "5"  "Failed login attempts before lockout"
+env_add_if_missing "MESHCORE_LOGIN_LOCKOUT_SECS"      "300" "Lockout duration in seconds"
+env_add_if_missing "MESHCORE_TRUSTED_PROXIES"          ""   "Comma-separated IPs of trusted reverse proxies (e.g. 127.0.0.1 for cloudflared)"
+env_add_if_missing "MESHCORE_NTFY_URL"                 ""   "ntfy.sh topic URL for offline/recovery alerts (leave blank to disable)"
+env_add_if_missing "MESHCORE_NTFY_USER"                ""   "ntfy username (for self-hosted instances with auth)"
+env_add_if_missing "MESHCORE_NTFY_PASSWORD"            ""   "ntfy password"
+env_add_if_missing "MESHCORE_NTFY_OFFLINE_THRESHOLD"   "3"  "Consecutive failed polls before offline alert"
 
 if [[ $MIGRATED -eq 0 ]]; then
     ok ".env is already up to date."
+fi
+
+# Remind user to configure ntfy if URL is still empty
+if ! grep -q "^MESHCORE_NTFY_URL=.\+" "$ENV_FILE" 2>/dev/null; then
+    echo ""
+    info "Tip: set MESHCORE_NTFY_URL in $ENV_FILE to enable offline/recovery notifications via ntfy.sh."
 fi
 
 # ── Step 4: Restart service ───────────────────────────────────────────────────
